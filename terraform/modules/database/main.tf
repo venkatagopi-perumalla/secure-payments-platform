@@ -8,8 +8,9 @@ resource "aws_db_parameter_group" "this" {
   family = "postgres16"
 
   parameter {
-    name  = "rds.force_ssl"
-    value = "1"
+    name         = "rds.force_ssl"
+    apply_method = "pending-reboot"
+    value        = "1"
   }
   parameter {
     name  = "log_connections"
@@ -51,3 +52,4 @@ resource "aws_db_instance" "this" {
   skip_final_snapshot = true
   deletion_protection = false
 }
+
