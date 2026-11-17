@@ -16,3 +16,10 @@
 | Images are immutable and scanned | ECR tag mutability `IMMUTABLE`, scan on push, image tagged with the commit ID |
 | Software bill of materials kept | CycloneDX SBOM uploaded as a build artifact on every main build |
 | Terraform misconfigurations block the build | Trivy config scan with `exit-code: 1`; accepted risks listed with reasons in `.trivyignore` |
+| Tasks have no public IP | ECS task networking shows only a 10.30.11.x or 10.30.12.x private address (screenshot) |
+| Only the load balancer is public | Security groups: internet to load balancer on 80 only; tasks accept traffic only from the load balancer |
+| API key and idempotency key required | POST /payments needs X-API-Key (from Secrets Manager) and Idempotency-Key; a repeat returns the same payment |
+| No sensitive data in logs | CloudWatch log lines show payment ID and currency only |
+| Load spread across two zones | Logs show requests served by two tasks; health checks from both public subnets |
+| Self-healing | Stopped one task: 90 of 90 health checks returned 200, ECS restored 2 of 2 running tasks |
+| WAF rate limit blocks bursts | 3,000 requests in under a minute: first burst allowed, second burst 3,000 of 3,000 blocked with 403 (screenshot: docs/evidence/waf-block.png) |
