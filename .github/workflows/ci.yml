@@ -59,13 +59,14 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
-      - name: Scan Terraform for misconfigurations (report only until Day 12)
+      - name: Scan Terraform for misconfigurations (fails on HIGH or CRITICAL)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: config
           scan-ref: terraform
           severity: HIGH,CRITICAL
-          exit-code: "0"
+          trivyignores: .trivyignore
+          exit-code: "1"
 
   build-and-push:
     needs: [test, scan]
@@ -111,3 +112,4 @@ jobs:
 
       - name: Push the image
         run: docker push "${{ steps.ecr.outputs.registry }}/payments-api:${{ github.sha }}"
+

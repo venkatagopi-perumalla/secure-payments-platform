@@ -1,0 +1,6 @@
+# Accepted risks for the Terraform scan. Each entry needs a reason and is reviewed in the pull request.
+
+# State bucket (terraform/bootstrap) uses S3-managed encryption (AES256), not a customer-managed KMS key.
+# Accepted for the lab: the bucket is private, versioned and holds only Terraform state.
+AWS-0132
+AVD-AWS-0132
