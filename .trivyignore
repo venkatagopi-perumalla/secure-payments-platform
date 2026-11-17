@@ -4,3 +4,13 @@
 # Accepted for the lab: the bucket is private, versioned and holds only Terraform state.
 AWS-0132
 AVD-AWS-0132
+
+# Load balancer is internet-facing by design: it is the only public entry point,
+# protected by AWS WAF, and forwards only to the API tasks on port 8000.
+AWS-0053
+AVD-AWS-0053
+
+# KNOWN GAP: HTTP listener only. HTTPS needs a domain and an ACM certificate (optional Day 22).
+# Remove these two lines when HTTPS is added.
+AWS-0054
+AVD-AWS-0054
