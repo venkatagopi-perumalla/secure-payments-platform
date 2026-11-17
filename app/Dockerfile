@@ -1,5 +1,6 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 RUN useradd --system --uid 10001 appuser
 WORKDIR /app
 COPY requirements.txt .
