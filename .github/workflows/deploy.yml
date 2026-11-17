@@ -1,0 +1,63 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag (commit ID) to deploy"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: eu-north-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Sign in to AWS with the deploy user
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check the image exists and was scanned
+        env:
+          TAG: ${{ inputs.image_tag }}
+        run: |
+          STATUS=$(aws ecr describe-images --repository-name payments-api --image-ids imageTag="$TAG" --query 'imageDetails[0].imageScanStatus.status' --output text)
+          echo "Scan status: $STATUS"
+          test "$STATUS" = "COMPLETE"
+
+      - name: Get the running task definition
+        run: aws ecs describe-task-definition --task-definition payments-api --query taskDefinition > task-definition.json
+
+      - name: Put the new image in it
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: api
+          image: ${{ vars.ECR_REGISTRY }}/payments-api:${{ inputs.image_tag }}
+
+      - name: Deploy and wait for the service to be stable
+        id: deploy
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: payments
+          service: payments-api
+          wait-for-service-stability: true
+
+      - name: Fail if ECS rolled the release back
+        env:
+          WANT: ${{ steps.deploy.outputs.task-definition-arn }}
+        run: |
+          GOT=$(aws ecs describe-services --cluster payments --services payments-api --query 'services[0].taskDefinition' --output text)
+          echo "Deployed: $WANT"
+          echo "Running:  $GOT"
+          test "$GOT" = "$WANT"
