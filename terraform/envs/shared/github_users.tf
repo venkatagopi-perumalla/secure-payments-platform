@@ -29,6 +29,8 @@ data "aws_iam_policy_document" "ci_push" {
       "ecr:PutImage",
       "ecr:UploadLayerPart",
       "ecr:DescribeImages",
+      "ecr:BatchGetImage",
+      "ecr:GetDownloadUrlForLayer",
     ]
     resources = [aws_ecr_repository.api.arn]
   }
@@ -75,3 +77,4 @@ resource "aws_iam_user_policy" "deploy" {
   user   = aws_iam_user.deploy.name
   policy = data.aws_iam_policy_document.deploy.json
 }
+
