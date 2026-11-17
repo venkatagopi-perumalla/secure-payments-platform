@@ -10,3 +10,9 @@
 | Database password managed and rotated by AWS | `aws secretsmanager describe-secret`: name `rds!db-...`, encrypted with the project KMS key, RotationEnabled `True` |
 | Backups for point-in-time restore | BackupRetentionPeriod `7` days |
 | Registry tags immutable, images scanned on push | `aws ecr describe-repositories`: `IMMUTABLE True` |
+| Build user can only push to one registry | IAM policy `push-payments-api-image` on `payments-github-ci`; identity-check run prints `user/payments-github-ci` |
+| Vulnerable dependency blocked | Pull request adding `jinja2==2.10`: `scan` failed, `build-and-push` skipped |
+| Vulnerable image blocked | First real run blocked a HIGH zlib CVE in the base image; fixed by applying OS updates at build time |
+| Images are immutable and scanned | ECR tag mutability `IMMUTABLE`, scan on push, image tagged with the commit ID |
+| Software bill of materials kept | CycloneDX SBOM uploaded as a build artifact on every main build |
+| Terraform misconfigurations block the build | Trivy config scan with `exit-code: 1`; accepted risks listed with reasons in `.trivyignore` |
