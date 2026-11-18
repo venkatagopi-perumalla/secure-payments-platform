@@ -20,3 +20,10 @@ AVD-AWS-0054
 # Next step: dedicated KMS key with a CloudTrail key policy.
 AWS-0015
 AVD-AWS-0015
+
+# Alarm email topic is not encrypted.
+# Accepted for the lab: it carries only alarm names and states, no payment data.
+# Encrypting with the AWS-managed SNS key would block CloudWatch from publishing alarms.
+# Next step: dedicated KMS key whose policy allows cloudwatch.amazonaws.com.
+AWS-0095
+AVD-AWS-0095
