@@ -33,3 +33,8 @@
 | Manual rollback is approved and timed | rollback workflow, approved by venkatagopi-perumalla, revision 6 to 4 in 3 minutes 0 seconds |
 | Least-privilege deploy user | Deploy user policy: register task definitions, update one service, pass two roles, read image scan results; nothing else |
 | Only main can deploy | deploy run from branch test-deploy-from-branch refused in 6 seconds: "not allowed to deploy to production due to environment protection rules"; the deploy key was never released (docs/evidence/deploy-branch-refused.png) |
+| Every API action is recorded | CloudTrail trail payments-trail: multi-region, IsLogging true |
+| Audit logs cannot be silently edited | CloudTrail log file validation enabled (LogFileValidationEnabled true) |
+| Production changes are traceable to an identity | CloudTrail UpdateService events: all 4 deploys and the rollback by payments-github-deploy; 1 deliberate test by cli-admin |
+| Continuous compliance checks | AWS Config: 5 of 5 rules COMPLIANT (RDS encrypted, RDS not public, no public S3 read, WAF on load balancer, CloudTrail on) |
+| Accepted risk: CloudTrail log encryption | S3-managed encryption, not a customer-managed key; recorded in .trivyignore (AWS-0015) |
