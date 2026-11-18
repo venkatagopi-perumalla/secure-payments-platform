@@ -38,3 +38,6 @@
 | Production changes are traceable to an identity | CloudTrail UpdateService events: all 4 deploys and the rollback by payments-github-deploy; 1 deliberate test by cli-admin |
 | Continuous compliance checks | AWS Config: 5 of 5 rules COMPLIANT (RDS encrypted, RDS not public, no public S3 read, WAF on load balancer, CloudTrail on) |
 | Accepted risk: CloudTrail log encryption | S3-managed encryption, not a customer-managed key; recorded in .trivyignore (AWS-0015) |
+| Alerts reach a person | Forced payments-5xx-rate to ALARM: email at 17:13:20; automatic OK email at 17:14:18 (docs/evidence/alarm-email.png, alarm-ok-email.png) |
+| Service health is visible | CloudWatch dashboard payments-overview: requests, 5xx, p95 latency, ECS CPU and memory, database CPU and connections (docs/evidence/cloudwatch-dashboard.png) |
+| Reliability target defined | 99.5 percent non-5xx over 30 days with an error budget and burn rule (docs/slo.md) |
