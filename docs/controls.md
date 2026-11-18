@@ -32,3 +32,4 @@
 | Pipeline reports a rolled-back release as failed | Deploy run ended red: "deployment was likely rolled back by the deployment circuit breaker" |
 | Manual rollback is approved and timed | rollback workflow, approved by venkatagopi-perumalla, revision 6 to 4 in 3 minutes 0 seconds |
 | Least-privilege deploy user | Deploy user policy: register task definitions, update one service, pass two roles, read image scan results; nothing else |
+| Only main can deploy | deploy run from branch test-deploy-from-branch refused in 6 seconds: "not allowed to deploy to production due to environment protection rules"; the deploy key was never released (docs/evidence/deploy-branch-refused.png) |
