@@ -23,3 +23,8 @@
 | Load spread across two zones | Logs show requests served by two tasks; health checks from both public subnets |
 | Self-healing | Stopped one task: 90 of 90 health checks returned 200, ECS restored 2 of 2 running tasks |
 | WAF rate limit blocks bursts | 3,000 requests in under a minute: first burst allowed, second burst 3,000 of 3,000 blocked with 403 (screenshot: docs/evidence/waf-block.png) |
+| Deploys need a named approver | deploy workflow paused for review; approved in the production environment |
+| Only scanned images deploy | Deploy check reads DescribeImageScanFindings; refused an image with no scan result |
+| Zero-downtime rollout | Revision 2 to 4: 300 of 300 health checks returned 200; rollout completed in 2 minutes 3 seconds (docs/evidence/ecs-deploy-success.png) |
+| Bad release never reached users | Malformed image address (revision 3): new tasks could not start, revision 2 kept serving 2 of 2 tasks (docs/evidence/ecs-bad-image-event.png) |
+| Pipeline confirms what is running | Final deploy step: deployed and running task definition both payments-api:4 |
