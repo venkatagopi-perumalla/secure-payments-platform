@@ -23,3 +23,5 @@ Expected: 8 passed, 4 skipped (the 4 database tests run in CI against a real Pos
     uvicorn app.main:app --port 8000
 
 Open http://localhost:8000/health
+
+Deployment test 1
