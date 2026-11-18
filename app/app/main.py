@@ -46,6 +46,7 @@ def init_db():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if os.environ.get("SKIP_DB_INIT") != "1":
+        os.environ["REQUIRED_NEW_SETTING"]  # deliberate bug for the rollback test
         init_db()
     yield
 
@@ -121,3 +122,4 @@ def get_payment(payment_id: uuid.UUID):
     if row is None:
         raise HTTPException(status_code=404, detail="payment not found")
     return PaymentOut(id=row[0], amount=row[1], currency=row[2], reference=row[3], status=row[4])
+
