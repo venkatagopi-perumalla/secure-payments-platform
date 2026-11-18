@@ -29,7 +29,7 @@ jobs:
         env:
           TAG: ${{ inputs.image_tag }}
         run: |
-          STATUS=$(aws ecr describe-images --repository-name payments-api --image-ids imageTag="$TAG" --query 'imageDetails[0].imageScanStatus.status' --output text)
+          STATUS=$(aws ecr describe-image-scan-findings --repository-name payments-api --image-id imageTag="$TAG" --query 'imageScanStatus.status' --output text)
           echo "Scan status: $STATUS"
           test "$STATUS" = "COMPLETE"
 
@@ -61,3 +61,4 @@ jobs:
           echo "Deployed: $WANT"
           echo "Running:  $GOT"
           test "$GOT" = "$WANT"
+

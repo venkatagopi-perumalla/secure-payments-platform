@@ -67,7 +67,7 @@ data "aws_iam_policy_document" "deploy" {
     }
   }
   statement {
-    actions   = ["ecr:DescribeImages"]
+    actions   = ["ecr:DescribeImages", "ecr:DescribeImageScanFindings"]
     resources = [aws_ecr_repository.api.arn]
   }
 }
@@ -77,4 +77,5 @@ resource "aws_iam_user_policy" "deploy" {
   user   = aws_iam_user.deploy.name
   policy = data.aws_iam_policy_document.deploy.json
 }
+
 
