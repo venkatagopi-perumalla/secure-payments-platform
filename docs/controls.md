@@ -28,3 +28,7 @@
 | Zero-downtime rollout | Revision 2 to 4: 300 of 300 health checks returned 200; rollout completed in 2 minutes 3 seconds (docs/evidence/ecs-deploy-success.png) |
 | Bad release never reached users | Malformed image address (revision 3): new tasks could not start, revision 2 kept serving 2 of 2 tasks (docs/evidence/ecs-bad-image-event.png) |
 | Pipeline confirms what is running | Final deploy step: deployed and running task definition both payments-api:4 |
+| Broken release rolled back automatically | Circuit breaker triggered at 3 of 3 failed tasks; service returned to revision 4 in about 4 minutes with 0 user errors (docs/rollback.md) |
+| Pipeline reports a rolled-back release as failed | Deploy run ended red: "deployment was likely rolled back by the deployment circuit breaker" |
+| Manual rollback is approved and timed | rollback workflow, approved by venkatagopi-perumalla, revision 6 to 4 in 3 minutes 0 seconds |
+| Least-privilege deploy user | Deploy user policy: register task definitions, update one service, pass two roles, read image scan results; nothing else |
