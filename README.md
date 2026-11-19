@@ -1,5 +1,5 @@
 # Secure Payments API on AWS
-
+I built this project to practise how payment teams run services on AWS: a private network, encrypted data, approval before every production change, and proof that rollback and failover really work. I built, broke and fixed everything myself over one week in November 2026, and every number in this README comes from my own tests.
 A small payments API and the AWS platform around it, built the way a regulated team would run it: private networking, encryption with a customer-managed key, scanned and immutable images, approval-gated deployments, tested rollback, an audit trail, alarms and measured failure tests.
 
 **Stack:** Terraform · AWS (ECS Fargate, RDS PostgreSQL, ALB, WAF, KMS, Secrets Manager, ECR, CloudTrail, Config, CloudWatch) · GitHub Actions · Trivy · Python (FastAPI)
@@ -95,4 +95,12 @@ Region eu-north-1. Apply in this order:
 4. `terraform/envs/dev`: everything else (about 82 resources, about 20 minutes).
 
 Destroy `envs/dev` at the end of each session; `shared` and `bootstrap` survive.
+
+## What I learned
+
+- A green pipeline is not the same as a working deployment. My deploy check once passed an image that ECR had never scanned, and a rollback can look like a successful deploy. I now verify what is actually running.
+- Measuring from the user's side tells a different story. AWS reported the database failover complete in 48 seconds, but my test showed customers were affected for about 10 seconds.
+- Not every scanner finding should be "fixed" blindly. Encrypting the alarm topic with the default key would have silently stopped alerts, so I accepted it with a written reason instead.
+- Real accounts have limits. My lab account blocked the region and OIDC that I planned to use, so I redesigned around them and documented why.
+- Small mistakes cause big failures: one extra dot in a CI variable stopped every new container from starting. Reading the ECS service events found it in minutes.
 
