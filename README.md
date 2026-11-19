@@ -1,115 +1,97 @@
-# EKS GitOps Platform with DevSecOps
+# Secure Payments API on AWS
 
-Three containerised microservices running on **Amazon EKS**, with infrastructure built by **Terraform**, images built and security-scanned in **GitHub Actions**, deployments driven by **Argo CD** (GitOps), secrets pulled from **AWS Secrets Manager** through **EKS Pod Identity**, and monitoring with **Prometheus, Grafana and Loki** against a defined **SLO**.
+A small payments API and the AWS platform around it, built the way a regulated team would run it: private networking, encryption with a customer-managed key, scanned and immutable images, approval-gated deployments, tested rollback, an audit trail, alarms and measured failure tests.
+
+**Stack:** Terraform · AWS (ECS Fargate, RDS PostgreSQL, ALB, WAF, KMS, Secrets Manager, ECR, CloudTrail, Config, CloudWatch) · GitHub Actions · Trivy · Python (FastAPI)
+
+This is a portfolio project in a lab AWS account. It is not certified against PCI DSS or any other standard.
 
 ![Architecture](docs/architecture.png)
 
-**The key idea:** CI never touches the cluster. It builds, scans and pushes images, then commits the new image tag to Git. Argo CD notices the change in Git and makes the cluster match it. Git is the single source of truth, and every deployment is a reviewable, revertible commit.
+## Measured results
 
-## Results
+Every number below was measured in this environment on 17 to 19 November 2026. The evidence is in [`docs/`](docs/).
 
-Built, run and torn down on AWS (eu-north-1), October 2026:
+| Test | Result |
+| --- | --- |
+| Approved deployment (revision 2 to 4) | Completed in **2 minutes 3 seconds**, **0 of 300** health checks failed |
+| Release that crashes on start-up | ECS circuit breaker rolled back by itself after 3 failed tasks in **about 4 minutes**, **0 user errors** |
+| Manual rollback (revision 6 to 4) | **3 minutes 0 seconds** from approval to stable |
+| Stopping one running task | **90 of 90** health checks returned 200; ECS replaced the task |
+| Database Multi-AZ failover under load | Payments failed for **about 10 seconds**: **291 of 300** accepted, 8 returned 500, 1 timed out. AWS reported the failover complete in 48 seconds |
+| Point-in-time database restore | Restored to a new encrypted, private instance in **14.2 minutes** (13:47:08 to 14:01:19) |
+| Burst of 3,000 requests | Firewall rate limit blocked **3,000 of 3,000** after the first burst |
+| Alert path | Forced alarm emailed in about 1 minute; recovery email followed automatically |
 
-- A green pipeline built 3 images, **blocked a release over 3 HIGH CVEs** until they were fixed, then pushed to ECR with immutable SHA tags.
-- Argo CD deployed everything from Git; changing `replicas` in Git scaled the API, and manual `kubectl` changes were **reverted automatically** (self-heal).
-- The app processed **6,200+ orders** under load on EKS.
-- A deliberate bad config change caused **~25% errors**; the **SLO alert fired**, the cause was found through Grafana, Loki and Argo CD history, and a **`git revert` rolled it back** in about 2 minutes. Write-up: [RCA-001](docs/rca-001.md).
+## What it shows
 
-| | |
-|---|---|
-| ![CI pipeline green](docs/screenshots/02-ci-pipeline-green.png) | ![Argo CD app tree](docs/screenshots/06-argocd-app-tree.png) |
-| CI: Gitleaks, tests, Trivy, push to ECR, tag update | Argo CD: the whole app synced from Git |
-| ![Incident and recovery](docs/screenshots/10-grafana-incident-recovery.png) | ![Alert firing](docs/screenshots/09-alert-firing.png) |
-| Grafana: the incident at ~25% errors and the recovery | Prometheus: the SLO fast-burn alert firing |
+**Network.** Three subnet tiers in two availability zones. The app and data subnets have no route to the internet; containers reach AWS through VPC endpoints instead of a NAT gateway. Security groups allow only internet to load balancer (80), load balancer to app (8000) and app to database (5432).
 
-More in [docs/screenshots](docs/screenshots).
+**Data.** PostgreSQL 16 encrypted with a customer-managed KMS key (yearly rotation), TLS forced on every connection, not publicly accessible, 7-day backups. AWS generates the master password and keeps it in Secrets Manager; no person or repository ever sees it.
 
----
+**Application.** FastAPI on ECS Fargate, 2 to 4 tasks with CPU autoscaling. The container runs as a non-root user with a read-only file system. Secrets are injected at start, the task role has no permissions, and every write needs an API key and an idempotency key, so a retried request never creates a second payment.
 
-## What's inside
+**Delivery.** Every pull request runs 12 tests against a real PostgreSQL, a dependency and secret scan, and a Terraform misconfiguration scan. Pushes to `main` also build the image, scan it, write a bill of materials, and push it tagged with the commit ID to a registry with immutable tags. Third-party actions are pinned to commit IDs.
 
-| Area | Tools | Why this choice |
-|---|---|---|
-| Apps | Python (FastAPI), nginx, PostgreSQL | Small services, so the focus stays on the platform |
-| Containers | Docker multi-stage builds, non-root users, read-only filesystems | Smaller images and less attack surface |
-| Infrastructure as Code | Terraform with reusable modules, S3 remote state with native locking | Repeatable environments; state is shared and protected from concurrent runs |
-| Network | VPC across 2 AZs, private subnets for nodes, one NAT gateway | Nodes aren't reachable from the internet; one NAT keeps cost down |
-| Kubernetes | Amazon EKS managed node group (Spot), Helm chart | Managed control plane; Spot cuts node cost |
-| CI | GitHub Actions: Gitleaks, unit tests, Trivy, push to ECR | Security checks run before any image is published |
-| CI auth | IAM user that can only push to the 3 ECR repositories (GitHub OIDC kept as a switchable option) | Least privilege; OIDC was blocked by the account's SCP, see "Problems I hit" |
-| CD | Argo CD with automated sync, prune and self-heal | GitOps: deploys and rollbacks are Git commits |
-| Secrets | AWS Secrets Manager + External Secrets Operator + EKS Pod Identity | No passwords in Git; least-privilege access to one secret |
-| Observability | kube-prometheus-stack, Loki, Grafana Alloy, custom dashboard | Metrics, logs and alerts in one place |
-| Reliability | SLO 99.5% with a multi-window fast-burn alert | Alerts on user impact, not on noise |
+**Change control.** Deployments and rollbacks run in a GitHub `production` environment that needs a named approver and accepts only `main`. The deploy key is an environment secret, so it is released only after approval. The deploy checks the image was scanned and fails if ECS rolled the release back.
+
+**Audit and operations.** CloudTrail (multi-region, log file validation), AWS Config with 5 rules (all compliant), CloudWatch alarms to email, a dashboard, and a written SLO of 99.5 percent non-5xx requests over 30 days ([`docs/slo.md`](docs/slo.md)).
+
+The full list of controls, each with its evidence, is in [`docs/controls.md`](docs/controls.md). Rollback measurements are in [`docs/rollback.md`](docs/rollback.md).
+
+## Problems found and fixed
+
+Real issues the pipeline or the tests caught while building this:
+
+- **Vulnerable base image.** The image scan blocked a HIGH zlib vulnerability in `python:3.12-slim`; fixed by applying OS security updates at build time.
+- **Images ECR could not scan.** Newer Docker pushed an image index with a provenance record, which ECR basic scanning skips. Fixed by pushing a plain manifest (`--provenance=false`).
+- **Deploy gate reading an empty field.** AWS's newer basic scanning no longer reports scan status in `DescribeImages`; the deploy check now reads `DescribeImageScanFindings`.
+- **Malformed registry address.** A trailing dot in a CI variable produced an image reference ECS could not pull. Rolling deployment kept the old version serving, so users saw no errors; traced from the ECS service events.
+- **Terraform drift.** A database parameter showed a change on every plan because AWS and Terraform disagreed on its apply method; pinned `apply_method`.
+
+## Accepted risks and known gaps
+
+Accepted findings are recorded with reasons in [`.trivyignore`](.trivyignore), so none of them pass silently.
+
+- **HTTP only.** HTTPS needs a domain and an ACM certificate. This is the main gap.
+- **Load balancer is internet-facing.** By design: it is the only entry point and sits behind WAF.
+- **S3-managed encryption** for the Terraform state bucket and the CloudTrail bucket, and an unencrypted alarm topic. Next step: dedicated KMS keys with service-specific key policies (encrypting the topic with the default SNS key would stop CloudWatch from delivering alarms).
+- **Long-lived access keys instead of OIDC.** This lab account's organisation policy blocks creating an IAM OIDC provider, so CI uses two least-privilege IAM users: a push-only build user and a deploy user whose key is released only after approval. In a normal account I would use OIDC and remove the keys.
+- **Region eu-north-1.** The lab account allows only this region. It is still in the EU.
+- **Single approver.** With one person, GitHub's "prevent self-review" cannot be switched on.
+- **Password rotation.** ECS reads the database password only when a task starts. The fix in production is fetching the secret per connection or using RDS Proxy.
+- **The restored database was not queried,** because it is private. The restore was timed and checked for encryption and privacy.
+- **Failed payments during failover were not retried.** A client retry with the same idempotency key would make those 9 requests succeed safely.
 
 ## Repository layout
 
-```
-apps/                 api (FastAPI), worker, frontend (nginx) + Dockerfiles + tests
-helm/shop/            Helm chart: values.yaml (local) + values-eks.yaml (EKS, tag set by CI)
-infra/terraform/      bootstrap (state bucket), modules (vpc, eks, ecr), envs/dev
-gitops/argocd/        Argo CD Application
-monitoring/           Prometheus/Grafana, Loki and Alloy values, Grafana dashboard
-.github/workflows/    CI pipeline
-scripts/              local cluster, configure, platform install, load test, cleanup
-docs/                 architecture, RCA, screenshots
-```
-
-## How to run it
-
-Order of steps:
-
-```bash
-docker compose up --build                     # 1. run locally
-./scripts/local-up.sh                         # 2. local Kubernetes (kind)
-terraform -chdir=infra/terraform/envs/dev apply   # 3. AWS (after bootstrap + configure.sh)
-# 4. run the GitHub Actions pipeline
-./scripts/install-platform.sh                 # 5. Argo CD, External Secrets, monitoring
-terraform -chdir=infra/terraform/envs/dev destroy # 6. tear down
+```text
+app/                    FastAPI service, Dockerfile, 12 tests
+terraform/bootstrap/    Encrypted, versioned S3 bucket for Terraform state
+terraform/envs/shared/  Image registry and the two GitHub IAM users (kept between rebuilds)
+terraform/envs/dev/     Network, KMS, database, ECS, load balancer, WAF, audit, monitoring
+terraform/modules/      network, database, service
+.github/workflows/      ci, deploy, rollback, identity-check
+docs/                   controls, rollback, SLO, architecture and evidence screenshots
 ```
 
-## Security
+## Run the tests
 
-- **No keys in the cluster:** pods get AWS access through EKS Pod Identity.
-- **CI credentials:** GitHub OIDC where the account allows it (`use_github_oidc = true`); otherwise an IAM user whose only permission is pushing to the three ECR repositories, with its key in GitHub encrypted secrets and deleted after use.
-- **Least privilege:** External Secrets can read only the one database secret.
-- **Pipeline gates:** Gitleaks (secrets in code) and Trivy (fixable HIGH/CRITICAL CVEs fail the build).
-- **Hardened containers:** non-root users, read-only root filesystems, all Linux capabilities dropped, privilege escalation blocked.
-- **Immutable images:** ECR tags are immutable and set to the Git commit SHA, so every running image traces back to a commit.
+```powershell
+cd app
+pip install -r requirements-dev.txt
+pytest -q
+```
 
-## Observability and SLO
+Expected: 8 passed and 4 skipped. The 4 database tests run in CI against a real PostgreSQL. `docker-compose.yml` runs the API and a database locally for development.
 
-- **SLO:** 99.5% of API requests succeed over 30 days (error budget 0.5%).
-- **Alert:** `ShopApiErrorBudgetFastBurn` fires when the error ratio is above 7.2% (14.4× the budget rate) over both 5 minutes and 1 hour, the multi-window approach from the Google SRE workbook. It fires fast on real incidents and ignores short blips.
-- **Dashboard:** requests per second by status, error ratio, p95 latency, restarts, and live logs.
+## Build it
 
-## Incident write-up
+Region eu-north-1. Apply in this order:
 
-See **[docs/rca-001.md](docs/rca-001.md)**: a deliberate failure, how it was detected and investigated, the fix, and prevention actions.
+1. `terraform/bootstrap`: the state bucket.
+2. `terraform/envs/shared`: the registry and the GitHub users. Create their access keys in the console and store them as GitHub secrets (build user as repository secrets, deploy user as `production` environment secrets).
+3. Push to `main` so CI builds the first image, then put its tag in `terraform/envs/dev/local.auto.tfvars` with `alert_email`.
+4. `terraform/envs/dev`: everything else (about 82 resources, about 20 minutes).
 
-## Cost
-
-About **$0.23 per hour** while EKS is running (control plane, NAT gateway, 2 Spot nodes, public IP and disks). The real build ran EKS for about 3.5 hours, a few dollars in total, because everything was destroyed the same day. Left running, it would be about **$170 a month**. Prices are approximate (eu-north-1, 2026).
-
-## Problems I hit
-
-| Problem | Cause | Fix |
-|---|---|---|
-| `terraform apply` failed creating IAM OIDC providers (403 AccessDenied) | The AWS account's service control policy denies `iam:CreateOpenIDConnectProvider` | Turned off IRSA (`enable_irsa = false`) and used **EKS Pod Identity** for pods; for CI, a least-privilege IAM user, with OIDC kept as a switchable option |
-| Resources could not be created in eu-west-1 | The account type is locked to one region (eu-north-1) | Moved everything to eu-north-1; the region is a variable throughout |
-| **Trivy failed the api build** | 3 HIGH CVEs in `starlette` 0.46.2 (CVE-2025-62727, CVE-2026-48818, CVE-2026-54283) | Upgraded FastAPI so Starlette moved to 1.7.0; did not weaken the scan |
-| Unit tests failed only in CI (`ModuleNotFoundError: app`) | `pytest` does not add the working directory to the import path | Added `pytest.ini` with `pythonpath = .` |
-| One failed matrix build cancelled the other two | GitHub's default `fail-fast: true` | Set `fail-fast: false` so each service reports independently |
-| `Permission denied` running scripts | Executable bits were lost when files passed through Windows | `chmod +x` and committed the mode change |
-| SLO alert did not fire after the bad deploy | The load generator had stopped, so there was no traffic to fail | Restarted traffic; prevention action in the RCA: add a synthetic probe |
-| Worker exits with code 137 on shutdown | The Python process runs as PID 1 and ignores SIGTERM, so it is force-killed after the grace period | Open: add a SIGTERM handler (or `tini`) so pods stop cleanly |
-
-## What I'd add next
-
-- Amazon RDS instead of in-cluster PostgreSQL
-- Ingress with the AWS Load Balancer Controller, TLS from ACM, and DNS
-- Karpenter for node autoscaling
-- OpenTelemetry tracing
-- Policy-as-code with Kyverno (e.g. block root containers)
-- Separate dev and prod environments, with promotion by pull request
-- Argo Rollouts for canary deployments
+Destroy `envs/dev` at the end of each session; `shared` and `bootstrap` survive.
