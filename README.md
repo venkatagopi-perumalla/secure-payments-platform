@@ -1,7 +1,7 @@
 # Secure Payments API on AWS
 I built this project to practise how payment teams run services on AWS: a private network, encrypted data, approval before every production change, and proof that rollback and failover really work. I built, broke and fixed everything myself over one week in November 2026, and every number in this README comes from my own tests.
 
-A small payments API and the AWS platform around it, built the way a regulated team would run it: private networking, encryption with a customer-managed key, scanned and immutable images, approval-gated deployments, tested rollback, an audit trail, alarms and measured failure tests.
+A small payments API on ECS Fargate, with RDS PostgreSQL, an ALB and WAF in front, a scanned CI pipeline, approval-gated deploys, CloudTrail and Config auditing, and CloudWatch alarms.
 
 **Stack:** Terraform · AWS (ECS Fargate, RDS PostgreSQL, ALB, WAF, KMS, Secrets Manager, ECR, CloudTrail, Config, CloudWatch) · GitHub Actions · Trivy · Python (FastAPI)
 
