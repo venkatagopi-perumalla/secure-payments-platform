@@ -31,7 +31,7 @@ Every number below was measured in this environment on 17 to 19 November 2026. T
 
 **Application.** FastAPI on ECS Fargate, 2 to 4 tasks with CPU autoscaling. The container runs as a non-root user with a read-only file system. Secrets are injected at start, the task role has no permissions, and every write needs an API key and an idempotency key, so a retried request never creates a second payment.
 
-**Delivery.** Every pull request runs 12 tests against a real PostgreSQL, a dependency and secret scan, and a Terraform misconfiguration scan. Pushes to `main` also build the image, scan it, write a bill of materials, and push it tagged with the commit ID to a registry with immutable tags. Third-party actions are pinned to commit IDs.
+**Delivery.** Every pull request runs 12 tests against a real PostgreSQL, a dependency and secret scan, and a Terraform misconfiguration scan. Pushes to `main` also build the image, scan it, write a bill of materials, and push it tagged with the commit ID to a registry with immutable tags. The Trivy action is pinned to a commit ID, because its version tags were hijacked in March 2026.
 
 **Change control.** Deployments and rollbacks run in a GitHub `production` environment that needs a named approver and accepts only `main`. The deploy key is an environment secret, so it is released only after approval. The deploy checks the image was scanned and fails if ECS rolled the release back.
 
@@ -95,3 +95,4 @@ Region eu-north-1. Apply in this order:
 4. `terraform/envs/dev`: everything else (about 82 resources, about 20 minutes).
 
 Destroy `envs/dev` at the end of each session; `shared` and `bootstrap` survive.
+
