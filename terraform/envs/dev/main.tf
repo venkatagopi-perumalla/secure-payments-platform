@@ -20,6 +20,7 @@ module "database" {
   subnet_ids        = module.network.data_subnet_ids
   security_group_id = module.network.db_security_group_id
   kms_key_arn       = aws_kms_key.main.arn
+  multi_az          = true
 }
 
 output "db_secret_arn" {

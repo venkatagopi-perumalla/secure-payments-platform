@@ -41,3 +41,5 @@
 | Alerts reach a person | Forced payments-5xx-rate to ALARM: email at 17:13:20; automatic OK email at 17:14:18 (docs/evidence/alarm-email.png, alarm-ok-email.png) |
 | Service health is visible | CloudWatch dashboard payments-overview: requests, 5xx, p95 latency, ECS CPU and memory, database CPU and connections (docs/evidence/cloudwatch-dashboard.png) |
 | Reliability target defined | 99.5 percent non-5xx over 30 days with an error budget and burn rule (docs/slo.md) |
+| Database survives a zone failure | Multi-AZ failover under load: payments failed for about 10 seconds (291 of 300 accepted); AWS events show failover 13:01:15 to 13:02:03 (docs/evidence/rds-failover-events.png, failover-probe-results.png, failover-probe.csv) |
+| Database can be restored to a point in time | Restored to a new encrypted, private instance in 14.2 minutes |
