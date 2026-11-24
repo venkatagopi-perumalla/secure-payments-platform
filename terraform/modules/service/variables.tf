@@ -55,3 +55,8 @@ variable "desired_count" {
   type    = number
   default = 2
 }
+
+variable "certificate_arn" {
+  type        = string
+  description = "ACM certificate for the HTTPS listener"
+}

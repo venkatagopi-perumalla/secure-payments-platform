@@ -3,7 +3,7 @@ I built this project to practise how payment teams run services on AWS: a privat
 
 A small payments API on ECS Fargate, with RDS PostgreSQL, an ALB and WAF in front, a scanned CI pipeline, approval-gated deploys, CloudTrail and Config auditing, and CloudWatch alarms.
 
-**Stack:** Terraform · AWS (ECS Fargate, RDS PostgreSQL, ALB, WAF, KMS, Secrets Manager, ECR, CloudTrail, Config, CloudWatch) · GitHub Actions · Trivy · Python (FastAPI)
+**Stack:** Terraform · AWS (ECS Fargate, RDS PostgreSQL, ALB, WAF, ACM, KMS, Secrets Manager, ECR, CloudTrail, Config, CloudWatch) · GitHub Actions · Trivy · Python (FastAPI)
 
 This is a portfolio project in a lab AWS account. It is not certified against PCI DSS or any other standard.
 
@@ -11,7 +11,7 @@ This is a portfolio project in a lab AWS account. It is not certified against PC
 
 ## Measured results
 
-Every number below was measured in this environment on 17 to 19 November 2026. The evidence is in [`docs/`](docs/).
+Every number below was measured in this environment between 17 and 24 November 2026. The evidence is in [`docs/`](docs/).
 
 | Test | Result |
 | --- | --- |
@@ -23,10 +23,11 @@ Every number below was measured in this environment on 17 to 19 November 2026. T
 | Point-in-time database restore | Restored to a new encrypted, private instance in **14.2 minutes** (13:47:08 to 14:01:19) |
 | Burst of 3,000 requests | Firewall rate limit blocked **3,000 of 3,000** after the first burst |
 | Alert path | Forced alarm emailed in about 1 minute; recovery email followed automatically |
+| HTTPS on a custom domain | `http://api.venkatagopiperumalla.com` returns **301** to HTTPS; `https://` returns **200** with an Amazon-issued certificate (TLS 1.2/1.3 policy) |
 
 ## What it shows
 
-**Network.** Three subnet tiers in two availability zones. The app and data subnets have no route to the internet; containers reach AWS through VPC endpoints instead of a NAT gateway. Security groups allow only internet to load balancer (80), load balancer to app (8000) and app to database (5432).
+**Network.** Three subnet tiers in two availability zones. The app and data subnets have no route to the internet; containers reach AWS through VPC endpoints instead of a NAT gateway. Security groups allow only internet to load balancer (443, plus 80 that only redirects to HTTPS), load balancer to app (8000) and app to database (5432).
 
 **Data.** PostgreSQL 16 encrypted with a customer-managed KMS key (yearly rotation), TLS forced on every connection, not publicly accessible, 7-day backups. AWS generates the master password and keeps it in Secrets Manager; no person or repository ever sees it.
 
@@ -54,7 +55,7 @@ Real issues the pipeline or the tests caught while building this:
 
 Accepted findings are recorded with reasons in [`.trivyignore`](.trivyignore), so none of them pass silently.
 
-- **HTTP only.** HTTPS needs a domain and an ACM certificate. This is the main gap.
+- **TLS ends at the load balancer.** Traffic from the internet is HTTPS (ACM certificate on `api.venkatagopiperumalla.com`, TLS 1.2/1.3 only); the hop from the load balancer to the tasks inside the VPC is plain HTTP on port 8000. The lab is destroyed nightly, so the address is not always live.
 - **Load balancer is internet-facing.** By design: it is the only entry point and sits behind WAF.
 - **S3-managed encryption** for the Terraform state bucket and the CloudTrail bucket, and an unencrypted alarm topic. Next step: dedicated KMS keys with service-specific key policies (encrypting the topic with the default SNS key would stop CloudWatch from delivering alarms).
 - **Long-lived access keys instead of OIDC.** This lab account's organisation policy blocks creating an IAM OIDC provider, so CI uses two least-privilege IAM users: a push-only build user and a deploy user whose key is released only after approval. In a normal account I would use OIDC and remove the keys.

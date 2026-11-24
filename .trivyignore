@@ -10,11 +10,6 @@ AVD-AWS-0132
 AWS-0053
 AVD-AWS-0053
 
-# KNOWN GAP: HTTP listener only. HTTPS needs a domain and an ACM certificate (optional Day 22).
-# Remove these two lines when HTTPS is added.
-AWS-0054
-AVD-AWS-0054
-
 # CloudTrail logs use S3-managed encryption (AES256), not a customer-managed KMS key.
 # Accepted for the lab: private audit bucket, HTTPS-only bucket policy, log file validation on.
 # Next step: dedicated KMS key with a CloudTrail key policy.

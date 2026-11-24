@@ -33,8 +33,9 @@ module "service" {
   db_secret_arn         = module.database.master_secret_arn
   api_key_secret_arn    = aws_secretsmanager_secret.api_key.arn
   kms_key_arn           = aws_kms_key.main.arn
+  certificate_arn       = aws_acm_certificate_validation.api.certificate_arn
 }
 
 output "app_url" {
-  value = "http://${module.service.alb_dns_name}"
+  value = "https://${var.api_domain}"
 }
