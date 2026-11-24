@@ -3,10 +3,11 @@
 | Control | Evidence |
 | --- | --- |
 | Private subnets with no internet route | `aws ec2 describe-route-tables` on payments-private shows only `10.30.0.0/16 local` |
-| Security groups allow only named sources | Terraform `security_groups.tf`: internet to load balancer on 80, load balancer to app on 8000, app to database on 5432 |
+| Security groups allow only named sources | Terraform `security_groups.tf`: internet to load balancer on 443 (and 80, which only redirects), load balancer to app on 8000, app to database on 5432 |
 | Database encrypted with a customer-managed key | `aws rds describe-db-instances`: StorageEncrypted `True`, PostgreSQL 16.13 |
 | Database not public | Same command: PubliclyAccessible `False`; it sits in data subnets with no internet route |
 | TLS enforced on every connection | `aws rds describe-db-parameters`: `rds.force_ssl 1` |
+| HTTPS for API traffic from the internet | `aws elbv2 describe-listeners`: 443 HTTPS with `ELBSecurityPolicy-TLS13-1-2-2021-06`; 80 redirects with 301. ACM certificate for `api.venkatagopiperumalla.com` issued by Amazon, validated by DNS (screenshots: docs/evidence/https-browser.png, docs/evidence/https-redirect.png) |
 | Database password managed and rotated by AWS | `aws secretsmanager describe-secret`: name `rds!db-...`, encrypted with the project KMS key, RotationEnabled `True` |
 | Backups for point-in-time restore | BackupRetentionPeriod `7` days |
 | Registry tags immutable, images scanned on push | `aws ecr describe-repositories`: `IMMUTABLE True` |
@@ -17,7 +18,7 @@
 | Software bill of materials kept | CycloneDX SBOM uploaded as a build artifact on every main build |
 | Terraform misconfigurations block the build | Trivy config scan with `exit-code: 1`; accepted risks listed with reasons in `.trivyignore` |
 | Tasks have no public IP | ECS task networking shows only a 10.30.11.x or 10.30.12.x private address (screenshot) |
-| Only the load balancer is public | Security groups: internet to load balancer on 80 only; tasks accept traffic only from the load balancer |
+| Only the load balancer is public | Security groups: internet to load balancer on 443 and 80 (redirect) only; tasks accept traffic only from the load balancer |
 | API key and idempotency key required | POST /payments needs X-API-Key (from Secrets Manager) and Idempotency-Key; a repeat returns the same payment |
 | No sensitive data in logs | CloudWatch log lines show payment ID and currency only |
 | Load spread across two zones | Logs show requests served by two tasks; health checks from both public subnets |

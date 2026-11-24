@@ -26,7 +26,7 @@ resource "aws_ecs_service" "api" {
     container_port   = 8000
   }
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.https]
 
   lifecycle {
     ignore_changes = [task_definition, desired_count]

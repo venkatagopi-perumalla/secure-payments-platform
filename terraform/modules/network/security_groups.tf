@@ -93,3 +93,12 @@ resource "aws_vpc_security_group_ingress_rule" "endpoints_from_app" {
   ip_protocol                  = "tcp"
   description                  = "From the API tasks only"
 }
+
+resource "aws_vpc_security_group_ingress_rule" "alb_https" {
+  security_group_id = aws_security_group.alb.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  description       = "HTTPS from the internet"
+}
