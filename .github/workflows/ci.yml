@@ -34,8 +34,8 @@ jobs:
       DB_PASSWORD: ci-only
       DB_SSLMODE: disable
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -49,9 +49,9 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Scan dependencies and secrets (fails on HIGH or CRITICAL)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
           scan-ref: app
@@ -60,7 +60,7 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
       - name: Scan Terraform for misconfigurations (fails on HIGH or CRITICAL)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: config
           scan-ref: terraform
@@ -73,10 +73,10 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Sign in to AWS with the build user
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -90,7 +90,7 @@ jobs:
         run: docker build --provenance=false --sbom=false -t "${{ steps.ecr.outputs.registry }}/payments-api:${{ github.sha }}" app
 
       - name: Scan the image (fails on HIGH or CRITICAL)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ steps.ecr.outputs.registry }}/payments-api:${{ github.sha }}
           severity: HIGH,CRITICAL
@@ -98,14 +98,14 @@ jobs:
           exit-code: "1"
 
       - name: Create the software bill of materials
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ steps.ecr.outputs.registry }}/payments-api:${{ github.sha }}
           format: cyclonedx
           output: sbom.cdx.json
 
       - name: Keep the bill of materials
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sbom
           path: sbom.cdx.json
